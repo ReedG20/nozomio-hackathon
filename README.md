@@ -67,3 +67,35 @@ bunx --bun shadcn@latest add -c apps/web <component>
 ```
 
 Components are placed under `packages/ui/src/components/` per `apps/web/components.json`.
+
+## Feedback-to-PR agent
+
+The bottom-right "Feedback" button submits a Convex mutation that schedules an internal
+action (`apps/web/convex/feedbackAgent.ts`). The action spins up (or resumes) a named
+Tensorlake sandbox called `feedback-agent`, clones this repo over HTTPS with a GitHub PAT,
+runs Claude Code CLI in headless mode (`claude -p ... --permission-mode bypassPermissions`)
+on a branch named `feedback/<id>-<unix>`, then commits, pushes, and opens a PR against `main`.
+After each run the sandbox is `suspend()`ed so the next submission resumes warm.
+
+### Services to sign up for
+
+- [Anthropic](https://console.anthropic.com/) — `ANTHROPIC_API_KEY`
+- [Tensorlake](https://cloud.tensorlake.ai/) — `TENSORLAKE_API_KEY`
+- [GitHub fine-grained PAT](https://github.com/settings/tokens?type=beta) scoped to **only**
+  `ReedG20/nozomio-hackathon`. Permissions: `Contents: read/write`,
+  `Pull requests: read/write`, `Metadata: read`. Do **not** grant `Workflows`,
+  `Administration`, or `Actions` — keeps blast radius small if a prompt injection escapes.
+
+### Push the keys to Convex
+
+These are read server-side from the Convex action; they are never exposed to the browser.
+
+```bash
+npx convex env set ANTHROPIC_API_KEY  "$ANTHROPIC_API_KEY"
+npx convex env set TENSORLAKE_API_KEY "$TENSORLAKE_API_KEY"
+npx convex env set GITHUB_TOKEN       "$GITHUB_TOKEN"
+npx convex env set GITHUB_REPO        "ReedG20/nozomio-hackathon"
+```
+
+Recommended: enable branch protection on `main` (require PR review, no direct push) so the
+agent's PAT can never bypass review.

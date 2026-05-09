@@ -9,6 +9,7 @@ import { Separator } from "@workspace/ui/components/separator";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { EnsureCurrentUser } from "@/components/ensure-current-user";
+import { FeedbackButton } from "@/components/feedback-button";
 import { NewIssueDialogProvider } from "@/components/new-issue-dialog";
 
 export default async function AppLayout({
@@ -42,6 +43,7 @@ export default async function AppLayout({
             </span>
           </header>
           <div className="flex flex-1 flex-col">{children}</div>
+          <FeedbackButton />
         </SidebarInset>
       </SidebarProvider>
     </NewIssueDialogProvider>

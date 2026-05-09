@@ -42,4 +42,22 @@ export default defineSchema({
     name: v.string(),
     value: v.number(),
   }).index("by_name", ["name"]),
+
+  feedback: defineTable({
+    title: v.string(),
+    body: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("succeeded"),
+      v.literal("failed"),
+    ),
+    branch: v.optional(v.string()),
+    prUrl: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    sandboxId: v.optional(v.string()),
+    claudeSessionId: v.optional(v.string()),
+    totalCostUsd: v.optional(v.number()),
+    creatorId: v.id("users"),
+  }).index("by_creator", ["creatorId"]),
 });

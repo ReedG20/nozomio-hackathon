@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as feedback from "../feedback.js";
+import type * as feedbackAgent from "../feedbackAgent.js";
 import type * as issues from "../issues.js";
 import type * as users from "../users.js";
 
@@ -18,6 +20,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  feedback: typeof feedback;
+  feedbackAgent: typeof feedbackAgent;
   issues: typeof issues;
   users: typeof users;
 }>;
