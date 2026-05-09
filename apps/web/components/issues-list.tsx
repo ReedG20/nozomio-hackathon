@@ -10,7 +10,9 @@ import { Tag01Icon } from "@hugeicons/core-free-icons";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import {
+  PRIORITY_ORDER,
   STATUS_ORDER,
+  type IssuePriority,
   type IssueStatus,
   priorityMeta,
   statusMeta,
@@ -26,12 +28,42 @@ type IssueWithRefs = Doc<"issues"> & {
   assignee: Doc<"users"> | null;
 };
 
+export type IssueSortKey = "newest" | "oldest" | "priority" | "title";
+
+const PRIORITY_RANK: Record<IssuePriority, number> = PRIORITY_ORDER.reduce(
+  (acc, p, i) => {
+    acc[p] = i;
+    return acc;
+  },
+  {} as Record<IssuePriority, number>,
+);
+
+function compareIssues(
+  a: IssueWithRefs,
+  b: IssueWithRefs,
+  sortBy: IssueSortKey,
+): number {
+  switch (sortBy) {
+    case "oldest":
+      return a._creationTime - b._creationTime;
+    case "priority":
+      return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+    case "title":
+      return a.title.localeCompare(b.title);
+    case "newest":
+    default:
+      return b._creationTime - a._creationTime;
+  }
+}
+
 export function IssuesList({
   filter = "all",
+  sortBy = "newest",
   emptyTitle = "No issues yet",
   emptyDescription = "Create your first issue to start tracking work.",
 }: {
   filter?: "all" | "mine";
+  sortBy?: IssueSortKey;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -67,6 +99,9 @@ export function IssuesList({
   for (const status of STATUS_ORDER) grouped.set(status, []);
   for (const issue of filtered) {
     grouped.get(issue.status as IssueStatus)?.push(issue);
+  }
+  for (const status of STATUS_ORDER) {
+    grouped.get(status)?.sort((a, b) => compareIssues(a, b, sortBy));
   }
 
   return (
