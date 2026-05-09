@@ -5,7 +5,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@workspace/ui/components/sidebar";
-import { Separator } from "@workspace/ui/components/separator";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { EnsureCurrentUser } from "@/components/ensure-current-user";
@@ -35,12 +34,15 @@ export default async function AppLayout({
       <SidebarProvider>
         <AppSidebar user={sidebarUser} />
         <SidebarInset>
-          <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <SidebarTrigger />
-            <Separator orientation="vertical" className="h-4" />
-            <span className="text-muted-foreground text-sm font-medium">
-              Workspace
-            </span>
+          <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-stretch gap-2 border-b px-3">
+            <div className="flex items-center">
+              <SidebarTrigger />
+            </div>
+            <div className="flex min-w-0 flex-1 items-center border-l border-border pl-3">
+              <span className="text-muted-foreground text-sm font-medium">
+                Workspace
+              </span>
+            </div>
           </header>
           <div className="flex flex-1 flex-col">{children}</div>
           <FeedbackButton />

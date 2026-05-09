@@ -51,9 +51,12 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon asChild>
-        <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="pointer-events-none size-4 text-muted-foreground" />
-      </SelectPrimitive.Icon>
+      <HugeiconsIcon
+        icon={UnfoldMoreIcon}
+        strokeWidth={2}
+        aria-hidden
+        className="pointer-events-none size-4 shrink-0 text-muted-foreground"
+      />
     </SelectPrimitive.Trigger>
   )
 }

@@ -1,0 +1,18 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - generic [ref=e10]: Welcome to Linelight
+        - generic [ref=e11]: A minimalist issue tracker for fast-moving teams. Sign in to start tracking work.
+      - generic [ref=e12]:
+        - link "Sign in" [ref=e13] [cursor=pointer]:
+          - /url: /sign-in
+          - text: Sign in
+          - img
+        - link "Create an account" [ref=e14] [cursor=pointer]:
+          - /url: /sign-up
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e20] [cursor=pointer]:
+    - img [ref=e21]
+  - alert [ref=e24]

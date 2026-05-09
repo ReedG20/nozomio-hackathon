@@ -9,7 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   Delete02Icon,
-  MoreHorizontalIcon,
+  UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 
@@ -190,7 +190,7 @@ export default function IssueDetailPage() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm">
-              <HugeiconsIcon icon={MoreHorizontalIcon} />
+              <HugeiconsIcon icon={UnfoldMoreIcon} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
