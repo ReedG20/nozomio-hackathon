@@ -40,6 +40,7 @@ import {
 } from "@workspace/ui/components/sidebar";
 
 import { useNewIssueDialog } from "@/components/new-issue-dialog";
+import { useIsHydrated } from "@/components/use-is-hydrated";
 
 type SidebarUser = {
   name?: string | null;
@@ -65,59 +66,80 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
   const newIssue = useNewIssueDialog();
   const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useIsHydrated();
   const isDark = resolvedTheme === "dark";
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="gap-3 data-[state=open]:bg-sidebar-accent"
-            >
-              <Avatar className="size-8">
-                <AvatarFallback>{initialsFor(user)}</AvatarFallback>
-              </Avatar>
-              <div className="flex min-w-0 flex-col text-left">
-                <span className="truncate text-sm font-medium">
-                  {user.name ?? user.email ?? "User"}
-                </span>
-                <span className="text-muted-foreground truncate text-xs">
-                  {user.email ?? ""}
-                </span>
-              </div>
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>{user.email ?? "Account"}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                setTheme(isDark ? "light" : "dark");
-              }}
-            >
-              <HugeiconsIcon
-                icon={isDark ? Sun02Icon : MoonIcon}
-                data-icon="inline-start"
-              />
-              {isDark ? "Light mode" : "Dark mode"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <form action="/api/sign-out" method="POST" className="w-full">
-                <button
-                  type="submit"
-                  className="flex w-full items-center gap-2 text-left"
-                >
-                  <HugeiconsIcon icon={Logout03Icon} />
-                  Sign out
-                </button>
-              </form>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {mounted ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton
+                size="lg"
+                className="gap-3 data-[state=open]:bg-sidebar-accent"
+              >
+                <Avatar className="size-8">
+                  <AvatarFallback>{initialsFor(user)}</AvatarFallback>
+                </Avatar>
+                <div className="flex min-w-0 flex-col text-left">
+                  <span className="truncate text-sm font-medium">
+                    {user.name ?? user.email ?? "User"}
+                  </span>
+                  <span className="text-muted-foreground truncate text-xs">
+                    {user.email ?? ""}
+                  </span>
+                </div>
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>{user.email ?? "Account"}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setTheme(isDark ? "light" : "dark");
+                }}
+              >
+                <HugeiconsIcon
+                  icon={isDark ? Sun02Icon : MoonIcon}
+                  data-icon="inline-start"
+                />
+                {isDark ? "Light mode" : "Dark mode"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <form action="/api/sign-out" method="POST" className="w-full">
+                  <button
+                    type="submit"
+                    className="flex w-full items-center gap-2 text-left"
+                  >
+                    <HugeiconsIcon icon={Logout03Icon} />
+                    Sign out
+                  </button>
+                </form>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <SidebarMenuButton
+            size="lg"
+            className="gap-3 data-[state=open]:bg-sidebar-accent"
+            tabIndex={-1}
+          >
+            <Avatar className="size-8">
+              <AvatarFallback>{initialsFor(user)}</AvatarFallback>
+            </Avatar>
+            <div className="flex min-w-0 flex-col text-left">
+              <span className="truncate text-sm font-medium">
+                {user.name ?? user.email ?? "User"}
+              </span>
+              <span className="text-muted-foreground truncate text-xs">
+                {user.email ?? ""}
+              </span>
+            </div>
+          </SidebarMenuButton>
+        )}
         <Button
           className="mt-2 w-full justify-start"
           size="sm"
