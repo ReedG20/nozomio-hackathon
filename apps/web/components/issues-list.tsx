@@ -4,14 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Tag01Icon } from "@hugeicons/core-free-icons";
 
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import {
+  PRIORITY_ORDER,
   STATUS_ORDER,
-  type IssueStatus,
   priorityMeta,
   statusMeta,
 } from "@/lib/issue-meta";
@@ -26,12 +26,23 @@ type IssueWithRefs = Doc<"issues"> & {
   assignee: Doc<"users"> | null;
 };
 
+type GroupMeta = { label: string; icon: IconSvgElement; tone: string };
+
+export type IssueSort =
+  | "status"
+  | "priority"
+  | "newest"
+  | "oldest"
+  | "number";
+
 export function IssuesList({
   filter = "all",
+  sortBy = "status",
   emptyTitle = "No issues yet",
   emptyDescription = "Create your first issue to start tracking work.",
 }: {
   filter?: "all" | "mine";
+  sortBy?: IssueSort;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -63,39 +74,60 @@ export function IssuesList({
     );
   }
 
-  const grouped = new Map<IssueStatus, IssueWithRefs[]>();
-  for (const status of STATUS_ORDER) grouped.set(status, []);
-  for (const issue of filtered) {
-    grouped.get(issue.status as IssueStatus)?.push(issue);
+  if (sortBy === "status" || sortBy === "priority") {
+    const groups: { key: string; meta: GroupMeta; items: IssueWithRefs[] }[] =
+      sortBy === "status"
+        ? STATUS_ORDER.map((s) => ({
+            key: s,
+            meta: statusMeta[s],
+            items: filtered.filter((i) => i.status === s),
+          }))
+        : PRIORITY_ORDER.map((p) => ({
+            key: p,
+            meta: priorityMeta[p],
+            items: filtered.filter((i) => i.priority === p),
+          }));
+
+    return (
+      <div className="flex flex-col">
+        {groups.map(({ key, meta, items }) => {
+          if (items.length === 0) return null;
+          return (
+            <section key={key} className="border-b last:border-b-0">
+              <header className="bg-muted/40 flex items-center gap-2 px-4 py-2">
+                <HugeiconsIcon
+                  icon={meta.icon}
+                  className={`size-4 ${meta.tone}`}
+                />
+                <h3 className="text-sm font-medium">{meta.label}</h3>
+                <span className="text-muted-foreground text-xs">
+                  {items.length}
+                </span>
+              </header>
+              <ul className="divide-y">
+                {items.map((issue) => (
+                  <IssueRow key={issue._id} issue={issue} />
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+    );
   }
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "newest") return b._creationTime - a._creationTime;
+    if (sortBy === "oldest") return a._creationTime - b._creationTime;
+    return b.number - a.number;
+  });
+
   return (
-    <div className="flex flex-col">
-      {STATUS_ORDER.map((status) => {
-        const group = grouped.get(status) ?? [];
-        if (group.length === 0) return null;
-        const meta = statusMeta[status];
-        return (
-          <section key={status} className="border-b last:border-b-0">
-            <header className="bg-muted/40 flex items-center gap-2 px-4 py-2">
-              <HugeiconsIcon
-                icon={meta.icon}
-                className={`size-4 ${meta.tone}`}
-              />
-              <h3 className="text-sm font-medium">{meta.label}</h3>
-              <span className="text-muted-foreground text-xs">
-                {group.length}
-              </span>
-            </header>
-            <ul className="divide-y">
-              {group.map((issue) => (
-                <IssueRow key={issue._id} issue={issue} />
-              ))}
-            </ul>
-          </section>
-        );
-      })}
-    </div>
+    <ul className="divide-y">
+      {sorted.map((issue) => (
+        <IssueRow key={issue._id} issue={issue} />
+      ))}
+    </ul>
   );
 }
 
