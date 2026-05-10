@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
+  ComputerIcon,
   InboxIcon,
   Logout03Icon,
   MoonIcon,
@@ -22,7 +23,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import {
@@ -65,9 +71,10 @@ function initialsFor(user: SidebarUser): string {
 export function AppSidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
   const newIssue = useNewIssueDialog();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const mounted = useIsHydrated();
   const isDark = resolvedTheme === "dark";
+  const currentTheme = theme ?? "system";
 
   const userButton = (
     <SidebarMenuButton
@@ -149,18 +156,43 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
             >
               <DropdownMenuLabel>{user.email ?? "Account"}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setTheme(isDark ? "light" : "dark");
-                }}
-              >
-                <HugeiconsIcon
-                  icon={isDark ? Sun02Icon : MoonIcon}
-                  data-icon="inline-start"
-                />
-                {isDark ? "Light mode" : "Dark mode"}
-              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <HugeiconsIcon
+                    icon={isDark ? MoonIcon : Sun02Icon}
+                    data-icon="inline-start"
+                  />
+                  Theme
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuRadioGroup
+                    value={currentTheme}
+                    onValueChange={setTheme}
+                  >
+                    <DropdownMenuRadioItem value="light">
+                      <HugeiconsIcon
+                        icon={Sun02Icon}
+                        data-icon="inline-start"
+                      />
+                      Light
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="dark">
+                      <HugeiconsIcon
+                        icon={MoonIcon}
+                        data-icon="inline-start"
+                      />
+                      Dark
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="system">
+                      <HugeiconsIcon
+                        icon={ComputerIcon}
+                        data-icon="inline-start"
+                      />
+                      System
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <form action="/api/sign-out" method="POST" className="w-full">
