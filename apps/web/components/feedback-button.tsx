@@ -200,6 +200,9 @@ export function FeedbackButton() {
               {submitting ? "Sending..." : "Send"}
             </Button>
           </DialogFooter>
+          <p className="pt-2 text-center text-xs text-muted-foreground">
+            Powered by Superfeedback
+          </p>
         </form>
       </DialogContent>
     </Dialog>
