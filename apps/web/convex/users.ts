@@ -27,23 +27,53 @@ export async function getCurrentUser(
   return user;
 }
 
-function buildUserPatch(identity: UserIdentity) {
-  const fullName = [identity.givenName, identity.familyName]
+type ProfileOverrides = {
+  email?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  profilePictureUrl?: string | null;
+};
+
+function buildUserPatch(
+  identity: UserIdentity,
+  overrides: ProfileOverrides = {},
+) {
+  const overrideFullName = [overrides.firstName, overrides.lastName]
+    .filter((p): p is string => Boolean(p && p.trim().length > 0))
+    .join(" ")
+    .trim();
+
+  const identityFullName = [identity.givenName, identity.familyName]
     .filter(Boolean)
     .join(" ")
     .trim();
-  const name =
-    identity.name ?? (fullName.length > 0 ? fullName : identity.email);
+
+  const email =
+    overrides.email && overrides.email.length > 0
+      ? overrides.email
+      : (identity.email ?? "");
+
+  const candidateName =
+    (overrideFullName.length > 0 ? overrideFullName : null) ??
+    identity.name ??
+    (identityFullName.length > 0 ? identityFullName : null) ??
+    (email.length > 0 ? email : null);
+
+  const pictureUrl =
+    overrides.profilePictureUrl ?? identity.pictureUrl ?? undefined;
+
   return {
     workosId: identity.subject,
-    email: identity.email ?? "",
-    name: name && name.length > 0 ? name : undefined,
-    pictureUrl: identity.pictureUrl ?? undefined,
+    email,
+    name:
+      candidateName && candidateName.length > 0 ? candidateName : undefined,
+    pictureUrl: pictureUrl ?? undefined,
   };
 }
 
 export async function ensureCurrentUser(
   ctx: MutationCtx,
+  overrides: ProfileOverrides = {},
 ): Promise<Doc<"users">> {
   const identity = await requireIdentity(ctx);
   const existing = await ctx.db
@@ -51,7 +81,7 @@ export async function ensureCurrentUser(
     .withIndex("by_workosId", (q) => q.eq("workosId", identity.subject))
     .unique();
 
-  const patch = buildUserPatch(identity);
+  const patch = buildUserPatch(identity, overrides);
 
   if (existing === null) {
     const id = await ctx.db.insert("users", patch);
@@ -100,10 +130,19 @@ export const list = query({
 });
 
 export const ensureCurrent = mutation({
-  args: {},
+  args: {
+    profile: v.optional(
+      v.object({
+        email: v.optional(v.string()),
+        firstName: v.optional(v.union(v.string(), v.null())),
+        lastName: v.optional(v.union(v.string(), v.null())),
+        profilePictureUrl: v.optional(v.union(v.string(), v.null())),
+      }),
+    ),
+  },
   returns: v.id("users"),
-  handler: async (ctx): Promise<Id<"users">> => {
-    const user = await ensureCurrentUser(ctx);
+  handler: async (ctx, args): Promise<Id<"users">> => {
+    const user = await ensureCurrentUser(ctx, args.profile ?? {});
     return user._id;
   },
 });

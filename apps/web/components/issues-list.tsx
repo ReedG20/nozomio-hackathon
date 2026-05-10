@@ -16,10 +16,10 @@ import {
   statusMeta,
 } from "@/lib/issue-meta";
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { useNewIssueDialog } from "@/components/new-issue-dialog";
+import { UserAvatar } from "@/components/assignee-select";
 
 type IssueWithRefs = Doc<"issues"> & {
   creator: Doc<"users"> | null;
@@ -102,10 +102,6 @@ export function IssuesList({
 function IssueRow({ issue }: { issue: IssueWithRefs }) {
   const priority = priorityMeta[issue.priority];
   const status = statusMeta[issue.status];
-  const assignee = issue.assignee;
-  const initials = assignee
-    ? (assignee.name ?? assignee.email).slice(0, 2).toUpperCase()
-    : "?";
   return (
     <li>
       <Link
@@ -129,9 +125,7 @@ function IssueRow({ issue }: { issue: IssueWithRefs }) {
             addSuffix: true,
           })}
         </span>
-        <Avatar className="size-6 shrink-0">
-          <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
-        </Avatar>
+        <UserAvatar user={issue.assignee} className="size-6" />
       </Link>
     </li>
   );

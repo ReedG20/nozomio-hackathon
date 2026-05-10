@@ -24,7 +24,6 @@ import {
   statusMeta,
 } from "@/lib/issue-meta";
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
 import {
   Card,
@@ -50,13 +49,17 @@ import { Separator } from "@workspace/ui/components/separator";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Textarea } from "@workspace/ui/components/textarea";
 
+import {
+  AssigneeSelect,
+  UserAvatar,
+} from "@/components/assignee-select";
+
 export default function IssueDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const issueId = params.id as Id<"issues">;
 
   const issue = useQuery(api.issues.get, { id: issueId });
-  const users = useQuery(api.users.list) ?? [];
   const updateIssue = useMutation(api.issues.update);
   const removeIssue = useMutation(api.issues.remove);
 
@@ -144,13 +147,9 @@ export default function IssueDetailPage() {
     }
   }
 
-  async function setAssignee(value: string) {
+  async function setAssignee(value: Id<"users"> | null) {
     try {
-      await updateIssue({
-        id: issueId,
-        assigneeId:
-          value === "unassigned" ? null : (value as Id<"users">),
-      });
+      await updateIssue({ id: issueId, assigneeId: value });
     } catch (err) {
       console.error(err);
       toast.error("Failed to update assignee");
@@ -170,9 +169,6 @@ export default function IssueDetailPage() {
 
   const status = statusMeta[issue.status as IssueStatus];
   const priority = priorityMeta[issue.priority as IssuePriority];
-  const assigneeInitials = issue.assignee
-    ? (issue.assignee.name ?? issue.assignee.email).slice(0, 2).toUpperCase()
-    : "?";
 
   return (
     <div className="flex flex-1 flex-col">
@@ -292,29 +288,10 @@ export default function IssueDetailPage() {
               </Select>
             </PropertyRow>
             <PropertyRow label="Assignee">
-              <Select
-                value={issue.assigneeId ?? "unassigned"}
-                onValueChange={(v) => void setAssignee(v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u._id} value={u._id}>
-                      <span className="inline-flex items-center gap-2">
-                        <Avatar className="size-4">
-                          <AvatarFallback className="text-[8px]">
-                            {(u.name ?? u.email).slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {u.name ?? u.email}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AssigneeSelect
+                value={issue.assigneeId ?? null}
+                onChange={(v) => void setAssignee(v)}
+              />
             </PropertyRow>
             <Separator />
             <div className="flex items-center gap-2 text-xs">
@@ -332,11 +309,7 @@ export default function IssueDetailPage() {
             </div>
             {issue.assignee ? (
               <div className="flex items-center gap-2">
-                <Avatar className="size-6">
-                  <AvatarFallback className="text-[10px]">
-                    {assigneeInitials}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar user={issue.assignee} className="size-6" />
                 <span className="text-sm">
                   {issue.assignee.name ?? issue.assignee.email}
                 </span>

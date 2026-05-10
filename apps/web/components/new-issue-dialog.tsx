@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -40,6 +40,8 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select";
 import { Textarea } from "@workspace/ui/components/textarea";
+
+import { AssigneeSelect } from "@/components/assignee-select";
 
 type NewIssueDialogContextValue = {
   open: () => void;
@@ -84,14 +86,13 @@ function NewIssueDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const users = useQuery(api.users.list) ?? [];
   const create = useMutation(api.issues.create);
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [status, setStatus] = React.useState<IssueStatus>("todo");
   const [priority, setPriority] = React.useState<IssuePriority>("none");
-  const [assigneeId, setAssigneeId] = React.useState<string>("unassigned");
+  const [assigneeId, setAssigneeId] = React.useState<Id<"users"> | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
   React.useEffect(() => {
@@ -100,7 +101,7 @@ function NewIssueDialog({
       setDescription("");
       setStatus("todo");
       setPriority("none");
-      setAssigneeId("unassigned");
+      setAssigneeId(null);
       setSubmitting(false);
     }
   }, [open]);
@@ -117,10 +118,7 @@ function NewIssueDialog({
         description,
         status,
         priority,
-        assigneeId:
-          assigneeId === "unassigned"
-            ? undefined
-            : (assigneeId as Id<"users">),
+        assigneeId: assigneeId ?? undefined,
       });
       toast.success("Issue created");
       onOpenChange(false);
@@ -217,19 +215,10 @@ function NewIssueDialog({
               </Field>
               <Field>
                 <FieldLabel>Assignee</FieldLabel>
-                <Select value={assigneeId} onValueChange={setAssigneeId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {users.map((u) => (
-                      <SelectItem key={u._id} value={u._id}>
-                        {u.name ?? u.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AssigneeSelect
+                  value={assigneeId}
+                  onChange={setAssigneeId}
+                />
               </Field>
             </div>
           </FieldGroup>
