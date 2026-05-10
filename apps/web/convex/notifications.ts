@@ -6,32 +6,6 @@ import { internalAction } from "./_generated/server";
 
 const LINQ_API_BASE = "https://api.linqapp.com/api/partner/v3";
 
-type LinqCreateChatResponse = {
-  chat?: { id?: string };
-  chat_id?: string;
-  id?: string;
-};
-
-function extractChatId(raw: unknown): string | null {
-  if (raw === null || typeof raw !== "object") return null;
-  const obj = raw as LinqCreateChatResponse;
-  if (typeof obj.chat_id === "string" && obj.chat_id.length > 0) {
-    return obj.chat_id;
-  }
-  if (typeof obj.id === "string" && obj.id.length > 0) {
-    return obj.id;
-  }
-  if (
-    obj.chat !== undefined &&
-    obj.chat !== null &&
-    typeof obj.chat.id === "string" &&
-    obj.chat.id.length > 0
-  ) {
-    return obj.chat.id;
-  }
-  return null;
-}
-
 async function linqPost(
   apiKey: string,
   path: string,
@@ -60,7 +34,7 @@ function truncate(input: string, max: number): string {
 export const sendFeedbackUpdate = internalAction({
   args: {
     id: v.id("feedback"),
-    kind: v.union(v.literal("succeeded"), v.literal("failed")),
+    kind: v.union(v.literal("merged"), v.literal("failed")),
     reason: v.optional(v.string()),
   },
   returns: v.null(),
@@ -88,61 +62,21 @@ export const sendFeedbackUpdate = internalAction({
     const phone = ctxRow.notifyPhone;
     const title = truncate(ctxRow.title, 80);
 
+    const message =
+      args.kind === "merged"
+        ? `Good news — we just shipped your request: "${title}". Thanks for the feedback!`
+        : `We weren't able to ship your request ("${title}") this time, but it's on our radar. Thanks for letting us know!`;
+
     try {
-      if (args.kind === "succeeded") {
-        const prUrl = ctxRow.prUrl;
-        const created = await linqPost(apiKey, "/chats", {
-          from: fromNumber,
-          to: [phone],
-          message: {
-            parts: [
-              {
-                type: "text",
-                value: `Your feedback fix for "${title}" is ready!`,
-              },
-            ],
-            preferred_service: "iMessage",
-            idempotency_key: `${args.id}-1`,
-          },
-        });
-        if (prUrl !== undefined && prUrl.length > 0) {
-          const chatId = extractChatId(created);
-          if (chatId === null) {
-            console.warn(
-              "sendFeedbackUpdate: could not extract chat id from Linq response",
-              created,
-            );
-          } else {
-            await linqPost(
-              apiKey,
-              `/chats/${encodeURIComponent(chatId)}/messages`,
-              {
-                message: {
-                  parts: [{ type: "link", value: prUrl }],
-                  preferred_service: "iMessage",
-                  idempotency_key: `${args.id}-2`,
-                },
-              },
-            );
-          }
-        }
-      } else {
-        const reason = truncate(args.reason ?? "Unknown error", 200);
-        await linqPost(apiKey, "/chats", {
-          from: fromNumber,
-          to: [phone],
-          message: {
-            parts: [
-              {
-                type: "text",
-                value: `Your feedback fix for "${title}" didn't go through: ${reason}`,
-              },
-            ],
-            preferred_service: "iMessage",
-            idempotency_key: `${args.id}-fail`,
-          },
-        });
-      }
+      await linqPost(apiKey, "/chats", {
+        from: fromNumber,
+        to: [phone],
+        message: {
+          parts: [{ type: "text", value: message }],
+          preferred_service: "iMessage",
+          idempotency_key: `${args.id}-${args.kind}`,
+        },
+      });
     } catch (err) {
       console.error(
         "sendFeedbackUpdate: Linq send failed",

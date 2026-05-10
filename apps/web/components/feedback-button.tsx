@@ -158,7 +158,7 @@ export function FeedbackButton() {
                   Text me when it's fixed
                 </FieldLabel>
                 <FieldDescription>
-                  We'll iMessage you the PR link as soon as it's ready.
+                  We'll iMessage you as soon as your request goes live.
                 </FieldDescription>
               </FieldContent>
               <Switch

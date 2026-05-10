@@ -115,6 +115,46 @@ PR_URL=$(GH_TOKEN="$GITHUB_TOKEN" gh pr create \\
 \${FEEDBACK_PROMPT}")
 
 echo "PR_URL=\${PR_URL}"
+
+MERGED=0
+MERGE_REASON=""
+for i in \$(seq 1 20); do
+  if MERGE_INFO=\$(GH_TOKEN="$GITHUB_TOKEN" gh pr view "$PR_URL" --json mergeable,mergeStateStatus -q '.mergeable + "|" + .mergeStateStatus' 2>/dev/null); then
+    MERGEABLE_VAL="\${MERGE_INFO%%|*}"
+    MERGE_STATE_VAL="\${MERGE_INFO#*|}"
+  else
+    MERGEABLE_VAL="ERROR"
+    MERGE_STATE_VAL="ERROR"
+  fi
+  case "$MERGEABLE_VAL" in
+    MERGEABLE)
+      if GH_TOKEN="$GITHUB_TOKEN" gh pr merge "$PR_URL" --squash --delete-branch >/tmp/merge-stdout.log 2>/tmp/merge-stderr.log; then
+        MERGED=1
+      else
+        MERGE_REASON="merge_failed_state=\${MERGE_STATE_VAL}"
+      fi
+      break
+      ;;
+    CONFLICTING)
+      MERGE_REASON="conflicts"
+      break
+      ;;
+    UNKNOWN|"")
+      sleep 3
+      ;;
+    *)
+      MERGE_REASON="unexpected_state=\${MERGEABLE_VAL}/\${MERGE_STATE_VAL}"
+      break
+      ;;
+  esac
+done
+
+if [ "$MERGED" -eq 0 ] && [ -z "$MERGE_REASON" ]; then
+  MERGE_REASON="timeout_waiting_for_mergeable"
+fi
+
+echo "MERGED=\${MERGED}"
+echo "MERGE_REASON=\${MERGE_REASON}"
 echo "----CLAUDE_JSON----"
 cat /tmp/claude-result.json
 `;
@@ -177,6 +217,28 @@ function extractPrUrl(stdout: string): string | null {
     }
   }
   return null;
+}
+
+function extractMerged(stdout: string): {
+  merged: boolean;
+  reason: string | null;
+} {
+  const lines = stdout.split(/\r?\n/);
+  let merged: boolean | null = null;
+  let reason: string | null = null;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (line === undefined) continue;
+    if (merged === null && line.startsWith("MERGED=")) {
+      const value = line.slice("MERGED=".length).trim();
+      merged = value === "1";
+    } else if (reason === null && line.startsWith("MERGE_REASON=")) {
+      const value = line.slice("MERGE_REASON=".length).trim();
+      reason = value.length === 0 ? null : value;
+    }
+    if (merged !== null && reason !== null) break;
+  }
+  return { merged: merged === true, reason };
 }
 
 function extractClaudeJson(stdout: string): ClaudeResult | null {
@@ -612,21 +674,34 @@ export const processFeedback = internalAction({
       }
 
       const claudeJson = extractClaudeJson(stdout);
-      await ctx.runMutation(internal.feedback._setSucceeded, {
-        id: args.id,
-        prUrl,
-        branch,
-        claudeSessionId: claudeJson?.session_id,
-        totalCostUsd: claudeJson?.total_cost_usd,
-      });
-      await ctx.scheduler.runAfter(
-        0,
-        internal.notifications.sendFeedbackUpdate,
-        {
+      const { merged, reason } = extractMerged(stdout);
+      console.log("processFeedback: merge result", { merged, reason });
+      if (merged) {
+        await ctx.runMutation(internal.feedback._setMerged, {
           id: args.id,
-          kind: "succeeded",
-        },
-      );
+          prUrl,
+          branch,
+          claudeSessionId: claudeJson?.session_id,
+          totalCostUsd: claudeJson?.total_cost_usd,
+        });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.notifications.sendFeedbackUpdate,
+          {
+            id: args.id,
+            kind: "merged",
+          },
+        );
+      } else {
+        await ctx.runMutation(internal.feedback._setOpen, {
+          id: args.id,
+          prUrl,
+          branch,
+          claudeSessionId: claudeJson?.session_id,
+          totalCostUsd: claudeJson?.total_cost_usd,
+          reason: reason ?? "could_not_auto_merge",
+        });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const stack = err instanceof Error ? err.stack : undefined;

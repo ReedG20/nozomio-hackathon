@@ -13,6 +13,8 @@ const feedbackStatus = v.union(
   v.literal("pending"),
   v.literal("running"),
   v.literal("succeeded"),
+  v.literal("merged"),
+  v.literal("open"),
   v.literal("failed"),
 );
 
@@ -180,7 +182,7 @@ export const _setRunning = internalMutation({
   },
 });
 
-export const _setSucceeded = internalMutation({
+export const _setMerged = internalMutation({
   args: {
     id: v.id("feedback"),
     prUrl: v.string(),
@@ -195,12 +197,39 @@ export const _setSucceeded = internalMutation({
       return null;
     }
     await ctx.db.patch(args.id, {
-      status: "succeeded",
+      status: "merged",
       prUrl: args.prUrl,
       branch: args.branch,
       claudeSessionId: args.claudeSessionId,
       totalCostUsd: args.totalCostUsd,
       errorMessage: undefined,
+    });
+    return null;
+  },
+});
+
+export const _setOpen = internalMutation({
+  args: {
+    id: v.id("feedback"),
+    prUrl: v.string(),
+    branch: v.string(),
+    claudeSessionId: v.optional(v.string()),
+    totalCostUsd: v.optional(v.number()),
+    reason: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (existing === null) {
+      return null;
+    }
+    await ctx.db.patch(args.id, {
+      status: "open",
+      prUrl: args.prUrl,
+      branch: args.branch,
+      claudeSessionId: args.claudeSessionId,
+      totalCostUsd: args.totalCostUsd,
+      errorMessage: args.reason.slice(0, 4000),
     });
     return null;
   },

@@ -50,6 +50,8 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("running"),
       v.literal("succeeded"),
+      v.literal("merged"),
+      v.literal("open"),
       v.literal("failed"),
     ),
     branch: v.optional(v.string()),
