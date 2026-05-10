@@ -12,7 +12,6 @@ import {
   MoonIcon,
   Sun02Icon,
   Tag01Icon,
-  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { useTheme } from "next-themes";
 
@@ -57,7 +56,6 @@ type SidebarUser = {
 const NAV_ITEMS = [
   { href: "/inbox", label: "Inbox", icon: InboxIcon },
   { href: "/issues", label: "All issues", icon: Tag01Icon },
-  { href: "/issues/mine", label: "My issues", icon: UserCircleIcon },
 ] as const;
 
 function initialsFor(user: SidebarUser): string {
