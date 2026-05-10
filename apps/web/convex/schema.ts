@@ -58,6 +58,7 @@ export default defineSchema({
     sandboxId: v.optional(v.string()),
     claudeSessionId: v.optional(v.string()),
     totalCostUsd: v.optional(v.number()),
+    notifyPhone: v.optional(v.string()),
     creatorId: v.id("users"),
   }).index("by_creator", ["creatorId"]),
 });

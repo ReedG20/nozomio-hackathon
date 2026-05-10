@@ -19,7 +19,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@workspace/ui/components/dialog";
-import { Field, FieldGroup, FieldLabel } from "@workspace/ui/components/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@workspace/ui/components/field";
+import { Input } from "@workspace/ui/components/input";
+import { Switch } from "@workspace/ui/components/switch";
 import { Textarea } from "@workspace/ui/components/textarea";
 
 function deriveTitle(body: string): string {
@@ -30,21 +38,35 @@ function deriveTitle(body: string): string {
   return `${source.slice(0, 77).trimEnd()}...`;
 }
 
+const PHONE_REGEX = /^(\+?1)?[\s\-.()]*\d{3}[\s\-.()]*\d{3}[\s\-.()]*\d{4}$/;
+
+function isValidPhone(input: string): boolean {
+  return PHONE_REGEX.test(input.trim());
+}
+
 export function FeedbackButton() {
   const submit = useMutation(api.feedback.submit);
 
   const mounted = useIsHydrated();
   const [open, setOpen] = React.useState(false);
   const [body, setBody] = React.useState("");
+  const [notify, setNotify] = React.useState(false);
+  const [phone, setPhone] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
   const bodyEmpty = body.trim().length === 0;
-  const disabled = bodyEmpty || submitting;
+  const phoneTrimmed = phone.trim();
+  const phoneValid = phoneTrimmed.length > 0 && isValidPhone(phoneTrimmed);
+  const phoneError = notify && phoneTrimmed.length > 0 && !phoneValid;
+  const disabled =
+    bodyEmpty || submitting || (notify && !phoneValid);
 
   function onOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     if (!nextOpen) {
       setBody("");
+      setNotify(false);
+      setPhone("");
       setSubmitting(false);
     }
   }
@@ -55,9 +77,15 @@ export function FeedbackButton() {
     setSubmitting(true);
     try {
       const trimmedBody = body.trim();
-      await submit({ title: deriveTitle(trimmedBody), body: trimmedBody });
+      await submit({
+        title: deriveTitle(trimmedBody),
+        body: trimmedBody,
+        ...(notify && phoneValid ? { notifyPhone: phoneTrimmed } : {}),
+      });
       toast.success("Thanks for your feedback!");
       setBody("");
+      setNotify(false);
+      setPhone("");
       setOpen(false);
     } catch (err) {
       console.error(err);
@@ -124,6 +152,41 @@ export function FeedbackButton() {
                 required
               />
             </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel htmlFor="feedback-notify">
+                  Text me when it's fixed
+                </FieldLabel>
+                <FieldDescription>
+                  We'll iMessage you the PR link as soon as it's ready.
+                </FieldDescription>
+              </FieldContent>
+              <Switch
+                id="feedback-notify"
+                checked={notify}
+                onCheckedChange={setNotify}
+              />
+            </Field>
+            {notify ? (
+              <Field data-invalid={phoneError ? "" : undefined}>
+                <FieldLabel htmlFor="feedback-phone">Phone number</FieldLabel>
+                <Input
+                  id="feedback-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="(555) 123-4567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  aria-invalid={phoneError ? true : undefined}
+                />
+                <FieldDescription>
+                  {phoneError
+                    ? "Enter a valid US number or full E.164 (e.g. +15551234567)."
+                    : "US numbers only. Standard messaging rates may apply."}
+                </FieldDescription>
+              </Field>
+            ) : null}
           </FieldGroup>
           <DialogFooter className="mt-6">
             <Button

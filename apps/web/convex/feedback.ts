@@ -28,13 +28,40 @@ const feedbackValidator = v.object({
   sandboxId: v.optional(v.string()),
   claudeSessionId: v.optional(v.string()),
   totalCostUsd: v.optional(v.number()),
+  notifyPhone: v.optional(v.string()),
   creatorId: v.id("users"),
 });
+
+// Normalize a user-entered phone string to E.164. Accepts:
+// - already E.164 (+15551234567)
+// - 10-digit US (5551234567 -> +15551234567)
+// - 11-digit starting with 1 (15551234567 -> +15551234567)
+// Throws on anything else.
+function normalizePhoneE164(input: string): string {
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    throw new Error("Phone number is required when notifications are enabled");
+  }
+  if (/^\+[1-9]\d{7,14}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+  throw new Error(
+    "Invalid phone number. Use a 10-digit US number or full E.164 (e.g. +15551234567).",
+  );
+}
 
 export const submit = mutation({
   args: {
     title: v.string(),
     body: v.string(),
+    notifyPhone: v.optional(v.string()),
   },
   returns: v.id("feedback"),
   handler: async (ctx, args): Promise<Id<"feedback">> => {
@@ -49,11 +76,17 @@ export const submit = mutation({
       throw new Error("Feedback body is required");
     }
 
+    let notifyPhone: string | undefined;
+    if (args.notifyPhone !== undefined && args.notifyPhone.trim().length > 0) {
+      notifyPhone = normalizePhoneE164(args.notifyPhone);
+    }
+
     const id: Id<"feedback"> = await ctx.db.insert("feedback", {
       title,
       body,
       status: "pending",
       creatorId: user._id,
+      ...(notifyPhone !== undefined ? { notifyPhone } : {}),
     });
 
     await ctx.scheduler.runAfter(0, internal.feedbackAgent.processFeedback, {
@@ -102,6 +135,27 @@ export const _getFeedback = internalQuery({
     const row = await ctx.db.get(args.id);
     if (row === null) return null;
     return { _id: row._id, title: row.title, body: row.body };
+  },
+});
+
+export const _getNotifyContext = internalQuery({
+  args: { id: v.id("feedback") },
+  returns: v.union(
+    v.object({
+      title: v.string(),
+      prUrl: v.optional(v.string()),
+      notifyPhone: v.optional(v.string()),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.id);
+    if (row === null) return null;
+    return {
+      title: row.title,
+      prUrl: row.prUrl,
+      notifyPhone: row.notifyPhone,
+    };
   },
 });
 

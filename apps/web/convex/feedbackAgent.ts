@@ -452,6 +452,15 @@ export const processFeedback = internalAction({
         id: args.id,
         errorMessage: `Server misconfigured: missing env ${missing}`,
       });
+      await ctx.scheduler.runAfter(
+        0,
+        internal.notifications.sendFeedbackUpdate,
+        {
+          id: args.id,
+          kind: "failed",
+          reason: "Server misconfigured.",
+        },
+      );
       return null;
     }
 
@@ -497,6 +506,15 @@ export const processFeedback = internalAction({
           errorMessage: `Bootstrap failed (exit ${bootstrap.exitCode}): ${tail}`,
           branch,
         });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.notifications.sendFeedbackUpdate,
+          {
+            id: args.id,
+            kind: "failed",
+            reason: "Sandbox bootstrap failed.",
+          },
+        );
         return null;
       }
 
@@ -536,6 +554,15 @@ export const processFeedback = internalAction({
           errorMessage: "Claude made no code changes for this feedback.",
           branch,
         });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.notifications.sendFeedbackUpdate,
+          {
+            id: args.id,
+            kind: "failed",
+            reason: "The agent didn't make any code changes.",
+          },
+        );
         return null;
       }
 
@@ -551,6 +578,15 @@ export const processFeedback = internalAction({
           errorMessage: `Run failed (exit ${result.exitCode}): ${tail}`,
           branch,
         });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.notifications.sendFeedbackUpdate,
+          {
+            id: args.id,
+            kind: "failed",
+            reason: `Run failed (exit ${result.exitCode}).`,
+          },
+        );
         return null;
       }
 
@@ -563,6 +599,15 @@ export const processFeedback = internalAction({
           )}`,
           branch,
         });
+        await ctx.scheduler.runAfter(
+          0,
+          internal.notifications.sendFeedbackUpdate,
+          {
+            id: args.id,
+            kind: "failed",
+            reason: "Couldn't parse the PR URL from the run output.",
+          },
+        );
         return null;
       }
 
@@ -574,6 +619,14 @@ export const processFeedback = internalAction({
         claudeSessionId: claudeJson?.session_id,
         totalCostUsd: claudeJson?.total_cost_usd,
       });
+      await ctx.scheduler.runAfter(
+        0,
+        internal.notifications.sendFeedbackUpdate,
+        {
+          id: args.id,
+          kind: "succeeded",
+        },
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const stack = err instanceof Error ? err.stack : undefined;
@@ -583,6 +636,15 @@ export const processFeedback = internalAction({
         errorMessage: `Action error: ${msg}`,
         branch,
       });
+      await ctx.scheduler.runAfter(
+        0,
+        internal.notifications.sendFeedbackUpdate,
+        {
+          id: args.id,
+          kind: "failed",
+          reason: `Action error: ${msg}`,
+        },
+      );
     } finally {
       if (sandboxId !== null) {
         try {
